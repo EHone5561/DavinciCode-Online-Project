@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>다빈치 코드 (Davinci Code)</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
+  html,body { height:100%; }
+  body { background:#072017; min-height:100vh; display:flex; flex-direction:column;
+         align-items:center; justify-content:flex-start; gap:8px; padding:10px; }
+
+  .topbar { width:860px; max-width:96vw; display:flex; justify-content:space-between;
+            align-items:center; color:#cfe6d6; font-size:15px; font-weight:700; }
+  .topbar .dim { color:#849c8d; font-weight:400; font-size:13px; margin-left:auto; }
+  /* ---- ★ 오른쪽 위 워터마크 ---- */
+  .topbar .credit { color:#5b6f63; font-weight:400; font-size:11px;
+                    letter-spacing:.5px; margin-left:10px; user-select:none; }
+
+  .table { width:860px; max-width:96vw; height:660px; flex:none;
+    background:radial-gradient(ellipse at center,#3c9b63 0%,#226a43 55%,#0f2f1d 100%);
+    border:16px solid #6d4a20; outline:5px solid #9a6b34; border-radius:52px;
+    box-shadow:inset 0 0 90px rgba(0,0,0,.5), 0 16px 44px rgba(0,0,0,.6);
+    display:grid; grid-template-rows:auto 1fr auto; grid-template-columns:auto 1fr auto;
+    position:relative; }
+
+  /* ---- 중앙 패산 (노란 정사각형) ---- */
+  .yama { grid-area:2/2; place-self:center; z-index:4;
+          display:flex; flex-direction:column; align-items:center;
+          gap:14px; }
+  /* ---- ★ 중앙 정보 바 (차례 + 라운드·덱·공개) ---- */
+  /*  패산과 같은 grid 셀(2/2) 안에 세로로 쌓아 정확히 중앙 정렬한다.
+      (절대좌표·별도 grid 아이템은 좌석 열 때문에 어긋난다 — 실측) */
+  .yamainfo { display:flex; flex-direction:column; align-items:center;
+              gap:2px; pointer-events:none; order:-1; }
+  .yamainfo .yline1 { display:flex; align-items:baseline; gap:16px;
+                      white-space:nowrap; }
+  .yamainfo .yturn { font-size:30px; font-weight:900; color:#ffd54a;
+                     letter-spacing:1px;
+                     text-shadow:0 3px 10px rgba(0,0,0,.85),
+                                 0 0 22px rgba(255,213,74,.35); }
+  .yamainfo .ystat { font-size:21px; font-weight:800; color:#eaf7ee;
+                     letter-spacing:.5px;
+                     text-shadow:0 2px 8px rgba(0,0,0,.8); }
+  .yamainfo .ystat .sep { color:#7fae90; margin:0 6px; font-weight:600; }
+  .rankboard { grid-area:2/2; place-self:center; z-index:6; display:none;
+               min-width:280px; padding:16px 20px; border-radius:16px;
+               background:linear-gradient(150deg,#1b3d28,#0d2418);
+               border:3px solid #e0b400;
+               box-shadow:0 0 34px rgba(0,0,0,.7), inset 0 0 26px rgba(224,180,0,.16); }
+  .rankboard.on { display:block; animation:pop .4s ease-out; }
+  .rankboard .rb-title { text-align:center; color:#ffd54a; font-size:20px;
+                         font-weight:900; letter-spacing:2px; margin-bottom:12px;
+                         text-shadow:0 2px 6px rgba(0,0,0,.8); }
+  .rankboard .rb-row { display:flex; align-items:center; gap:12px;
+                       padding:8px 12px; margin:6px 0; border-radius:9px;
+                       background:rgba(255,255,255,.06); color:#eaf7ee;
+                       font-size:16px; font-weight:800; }
+  .rankboard .rb-row.first { background:linear-gradient(90deg,#f2dd72,#c9a92e);
+                             color:#3f3600; box-shadow:0 0 16px rgba(242,221,114,.5); }
+  .rankboard .rb-row.me { outline:2px solid #8fd6a9; }
+  .rankboard .rb-rank { flex:none; width:44px; text-align:center; font-size:19px; }
+  .rankboard .rb-name { flex:1; }
+  .rankboard .rb-me { font-size:12px; opacity:.85; }
+  /* ---- ★ 다시하기 버튼 (순위표 아래) ---- */
+  .rankboard .btn-restart { display:block; width:100%; margin-top:14px; padding:11px 16px;
+                            border-radius:10px; border:2px solid #7fd6a0; cursor:pointer;
+                            background:linear-gradient(150deg,#2f7a4d,#1c4d30);
+                            color:#eaf7ee; font-size:16px; font-weight:900;
+                            letter-spacing:1px; font-family:inherit;
+                            text-shadow:0 1px 3px rgba(0,0,0,.6);
+                            transition:filter .15s, transform .1s; }
+  .rankboard .btn-restart:hover { filter:brightness(1.18); }
+  .rankboard .btn-restart:active { transform:scale(.97); }
+  .rankboard .btn-restart.voted { border-color:#ffd54a; cursor:default;
+                                  background:linear-gradient(150deg,#6b5a12,#3d3408);
+                                  color:#ffe98a; }
+  .rankboard .rb-hint { margin-top:9px; text-align:center; color:#9fb8a8;
+                        font-size:12px; font-weight:600; min-height:15px; }
+  .yama-inner { width:130px; height:130px; border-radius:14px;
+    background:linear-gradient(150deg,#ffe98a,#e3c950); border:4px solid #b08f1e;
+    box-shadow:inset 0 0 22px rgba(130,95,0,.4), 0 6px 14px rgba(0,0,0,.4);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; color:#5a4600; position:relative; }
+  .yama-inner .label { font-size:18px; font-weight:800; letter-spacing:3px; }
+  .wall { display:flex; gap:3px; margin:7px 0; }
+  .wall i { width:16px; height:16px; border-radius:3px;
+            background:#f7e072; border:1px solid #b08f1e; }
+  .deck { font-size:11px; font-weight:600; opacity:.85; }
+  .turn-arrow { color:#3f3600; font-size:11px; margin-top:1px; }
+
+  /* ---- ★ 결과 표시 (큰 빨간 O / 파란 X) ----
+     ★ EHone 요청: 패산 위 작은 O/X 는 없애고 **큰 하나만** 띄운다.
+       (예전엔 .verdict + .big-verdict 둘 다 켜져서 O/X 가 두 번 보였다.) */
+  .big-verdict { position:absolute; inset:0; display:none; align-items:center;
+                 justify-content:center; pointer-events:none; z-index:8; }
+  .big-verdict.show { display:flex; animation:pop .35s ease-out; }
+  .big-verdict .mark { font-size:190px; font-weight:900; line-height:1;
+                       opacity:.9; text-shadow:0 0 26px rgba(0,0,0,.6); }
+  .big-verdict.ok .mark { color:#ff3b30; }
+  .big-verdict.no .mark { color:#2f7bff; }
+  @keyframes pop { 0% { transform:scale(.4); opacity:0; }
+                   60% { transform:scale(1.15); opacity:1; }
+                   100% { transform:scale(1); opacity:1; } }
+
+  /* ---- 좌석 그리드 셀 ---- */
+  .seat { display:flex; }
+  .seat .cap { width:100%; text-align:center; font-size:12px; font-weight:700;
+               color:#eaf7ee; text-shadow:0 1px 2px rgba(0,0,0,.6); margin-bottom:4px; }
+  .seat.human .cap { color:#9fe8b8; }
+  .seat.out .cap { color:#849c8d; }
+
+  .seat.top    { grid-area:1/1/2/4; flex-direction:column; align-items:center; padding:6px 0 0; }
+  .seat.left   { grid-area:2/1;     align-items:center; padding-left:10px; }
+  .seat.right  { grid-area:2/3;     align-items:center; padding-right:10px; }
+  .seat.bottom { grid-area:3/1/4/4; flex-direction:column; align-items:center; padding:6px 0 8px; }
+
+  .hand { display:flex; gap:5px; padding:2px; flex-wrap:wrap; justify-content:center;
+          align-items:center; }
+  .seat.left .hand, .seat.right .hand { flex-direction:column; }
+  .seat.left .cap, .seat.right .cap { width:auto; writing-mode:vertical-lr; margin:0; }
+
+  /* ---- 카드 ---- */
+  .tile { width:46px; height:64px; border-radius:7px; border:2px solid rgba(0,0,0,.3);
+          box-shadow:0 3px 5px rgba(0,0,0,.45);
+          display:flex; align-items:center; justify-content:center;
+          font-size:26px; font-weight:800; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.45);
+          position:relative; transition:transform .15s; }
+  .tile.b { background:linear-gradient(145deg,#333,#0e0e0e); }
+  .tile.w { background:linear-gradient(145deg,#fdfdfd,#c9c9c9); color:#222; text-shadow:none; }
+  .tile.b.back { background:repeating-linear-gradient(45deg,#262626 0 7px,#1a1a1a 7px 12px); }
+  .tile.w.back { background:repeating-linear-gradient(45deg,#ececea 0 7px,#dcdcda 7px 12px); }
+  .tile.back::after { content:'◈'; font-size:14px; }
+  .tile.b.back::after { color:#fff; opacity:.8; }
+  .tile.w.back::after { color:#222; opacity:.55; }
+  .tile .star { position:absolute; top:-2px; right:2px; color:#ff5757; font-size:13px;
+                text-shadow:0 0 3px #000; line-height:1; }
+  .tile.joker { border-color:#e0b400; }
+  /* ★ 이미 공개된 카드 = 파란 띠 (누가 봐도 '공개됨'이 한눈에) */
+  .tile.revealed {
+    box-shadow:0 0 0 3px #3fa9f5, 0 4px 9px rgba(0,0,0,.5);
+    border-color:#3fa9f5;
+  }
+  .tile.revealed.armed { outline-color:#ffd54a; }
+  /* 좌/우 좌석 카드는 가로로 눕혀 표현 */
+  .seat.left .tile, .seat.right .tile { width:64px; height:46px; font-size:22px; }
+
+  /* ---- ★ 클릭 가능한 상대 카드 (지목 대상) ---- */
+  .tile.pick { cursor:pointer; }
+  /* 호버: 위치를 움직이지 않고 테두리·밝기만 강조 (커졌다 작아졌다 방지) */
+  .tile.pick:hover { box-shadow:0 0 0 3px #ffd54a, 0 6px 10px rgba(0,0,0,.6);
+                     filter:brightness(1.15); }
+  .tile.pick.armed { outline:4px solid #ffd54a; outline-offset:2px;
+                     box-shadow:0 0 14px rgba(255,213,74,.85), 0 6px 12px rgba(0,0,0,.6);
+                     transform:scale(1.18); z-index:5; }
+  .tile.dimmed { opacity:.35; }
+  /* ---- ★ 조커 삽입 슬롯 (화살표) ---- */
+  .slot-arrow { width:26px; display:flex; align-items:center; justify-content:center;
+                color:#ffd54a; text-shadow:0 1px 3px rgba(0,0,0,.7);
+                font-size:22px; font-weight:900; cursor:pointer; opacity:0;
+                transition:opacity .15s, filter .15s; }
+  .slot-arrow.on { opacity:1; }
+  .slot-arrow.on:hover { filter:brightness(1.45); }
+  .seat.left .slot-arrow, .seat.right .slot-arrow { width:auto; height:26px; font-size:18px; }
+  .hand .slot-item { display:flex; align-items:center; justify-content:center; }
+  .seat.left .hand .slot-item, .seat.right .hand .slot-item { flex-direction:column; }
+  /* 조커 앞/뒤 선택 버튼 */
+  .side-pick { display:none; gap:8px; margin-top:6px; }
+  .side-pick.on { display:flex; }
+  .side-pick button { background:#f2dd72; color:#3f3600; border:2px solid #a98d1e;
+                      border-radius:8px; padding:6px 14px; font-weight:800; cursor:pointer;
+                      font-size:13px; }
+  .side-pick button:hover { background:#ffe98a; }
+  .tile.joker-target { animation:jblink 1s infinite; }
+  @keyframes jblink { 0%,100% { outline:3px solid #ffd54a; outline-offset:2px; }
+                      50% { outline:3px solid rgba(255,213,74,.2); outline-offset:2px; } }
+
+  /* ---- 하단 패널 ---- */
+  .panel { width:860px; max-width:96vw; background:#0a1a12; border:1px solid #1c3a29;
+           border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; }
+  .log { height:150px; overflow-y:auto; color:#a8c4b4; font-size:14px;
+         font-family:Consolas,monospace; line-height:1.6; }
+  .log .ok { color:#8fd6a9; }
+  .log .no { color:#e8a0a0; }
+  .inputbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .inputbar .prompt { color:#eaf7ee; font-size:16px; font-weight:700; }
+  input[type=text] { flex:1; min-width:160px; background:#123322; color:#eaf7ee;
+                     border:1px solid #2e6b4a; border-radius:8px; padding:9px 11px;
+                     font-family:Consolas,monospace; font-size:16px; outline:none; }
+  input[type=text]:disabled { opacity:.4; }
+  .btn { background:#173a27; color:#cfe6d6; border:1px solid #2e6b4a; padding:9px 18px;
+         border-radius:8px; cursor:pointer; font-weight:700; font-size:15px; }
+  .btn:hover { background:#1f4c33; }
+  .btn:disabled { opacity:.4; cursor:default; }
+  .btn.gold { background:#f2dd72; color:#3f3600; border-color:#a98d1e; }
+  .hint { color:#6f8f7a; font-size:13px; letter-spacing:.3px; }
+
+  /* ---- ★ 값 선택 버튼 줄 (추측 모드) ---- */
+  .valbar { display:none; gap:5px; flex-wrap:wrap; align-items:center;
+            background:#0d2418; border:1px solid #1c3a29; border-radius:8px; padding:6px 8px; }
+  .valbar.on { display:flex; }
+  .valbar .vlabel { color:#849c8d; font-size:11px; font-weight:700; margin-right:4px; }
+  .valbar .vchip { padding:6px 12px; border-radius:7px; font-weight:800; font-size:17px;
+                   min-width:42px; text-align:center;
+                   cursor:pointer; border:2px solid rgba(0,0,0,.35); color:#fff; }
+  .valbar .vchip.b { background:linear-gradient(145deg,#333,#0e0e0e); }
+  .valbar .vchip.w { background:linear-gradient(145deg,#fdfdfd,#c9c9c9); color:#222; }
+  .valbar .vchip:hover { box-shadow:0 0 0 3px #ffd54a; }
+  .valbar .vchip.hot { outline:3px solid #ffd54a; outline-offset:1px; }
+  .valbar .vchip.jk { border-color:#e0b400; }
+
+  /* ---- ★ 모드별 선택 버튼 (검은카드수 · 계속/그만 · 공개자리) ---- */
+  .choicebar { display:none; gap:9px; flex-wrap:wrap; align-items:center;
+               background:#0d2418; border:1px solid #1c3a29; border-radius:8px;
+               padding:8px 10px; }
+  .choicebar.on { display:flex; }
+  .choicebar .clabel { color:#a8c4b4; font-size:14px; font-weight:700; margin-right:4px; }
+  .choicebar .cbtn { padding:9px 18px; border-radius:8px; font-weight:800; font-size:16px;
+                     cursor:pointer; border:2px solid #a98d1e;
+                     background:linear-gradient(145deg,#f7e08a,#e3c950); color:#3f3600; }
+  .choicebar .cbtn:hover { box-shadow:0 0 0 3px #ffd54a; filter:brightness(1.08); }
+  .choicebar .cbtn.no { background:#173a27; color:#cfe6d6; border-color:#2e6b4a; }
+  .choicebar .cbtn.no:hover { box-shadow:0 0 0 3px #2e6b4a; }
+  /* ★ 공개할 카드 고르기 — 버튼을 실제 카드처럼 보이게 (값 + 색) */
+  .choicebar .cbtn.cardlike { min-width:52px; text-align:center; border-color:#8a8a8a; }
+  .choicebar .cbtn.cardlike.b { background:linear-gradient(145deg,#333,#0e0e0e);
+                                color:#fff; border-color:#555; }
+  .choicebar .cbtn.cardlike.w { background:linear-gradient(145deg,#fdfdfd,#c9c9c9);
+                                color:#222; border-color:#bbb; text-shadow:none; }
+  .choicebar .cbtn.cardlike.b:hover { box-shadow:0 0 0 3px #ffd54a; }
+  .choicebar .cbtn.cardlike.w:hover { box-shadow:0 0 0 3px #ffd54a; }
+
+  /* ---- ★ 채팅 로그 (게임 로그와 분리된 대화창) ---- */
+  .chatlog { height:96px; overflow-y:auto; color:#cfe6d6; font-size:14px;
+             line-height:1.55; display:flex; flex-direction:column; gap:2px; }
+  .chatlog .chead { color:#6f8f7a; font-size:12px; font-weight:700; letter-spacing:.5px; }
+  .chatlog .cline { color:#eaf7ee; }
+  .chatlog .cline.me { color:#9fe8b8; }
+  .chatlog .cname { color:#ffd54a; font-weight:800; }
+  .chatlog .cline.me .cname { color:#8fd6a9; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span id="title">다빈치 코드</span>
+    <span class="dim" id="sub"></span>
+    <span class="credit" id="credit">EHone 개발</span>
+  </div>
+
+  <div class="table">
+    <div class="seat top"    data-seat="top"><div class="cap"></div><div class="hand"></div>
+      <div class="side-pick" data-side="top"></div></div>
+    <div class="seat left"   data-seat="left"><div class="cap"></div><div class="hand"></div>
+      <div class="side-pick" data-side="left"></div></div>
+
+    <div class="yama" id="yama">
+      <!-- ★ 패산 위 큰 정보 바 (차례 + 라운드·덱·공개) -->
+      <div class="yamainfo" id="yamainfo">
+        <div class="yline1">
+          <span class="yturn" id="yturn"></span>
+          <span class="ystat" id="ystat"></span>
+        </div>
+      </div>
+      <div class="yama-inner">
+        <div class="turn-arrow" id="arrow">시계방향 턴</div>
+        <div class="label">패 산</div>
+        <div class="wall"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="deck" id="deck"></div>
+      </div>
+    </div>
+    <!-- ★ 게임 종료 시 패산 자리에 뜨는 순위표 -->
+    <div class="rankboard" id="rankboard">
+      <div class="rb-title">🏆 최종 순위</div>
+      <div class="rb-list" id="rb-list"></div>
+      <!-- ★ 다시하기 — 전원이 누르면 같은 구성원으로 새 게임 -->
+      <button class="btn-restart" id="btn-restart" style="display:none"></button>
+      <div class="rb-hint" id="rb-hint"></div>
+    </div>
+    <div class="big-verdict" id="bigverdict"><span class="mark"></span></div>
+
+    <div class="seat right"  data-seat="right"><div class="cap"></div><div class="hand"></div>
+      <div class="side-pick" data-side="right"></div></div>
+    <div class="seat bottom" data-seat="bottom"><div class="cap"></div><div class="hand"></div>
+      <div class="side-pick" data-side="bottom"></div></div>
+  </div>
+
+  <div class="panel">
+    <div class="log" id="log"></div>
+    <div class="chatlog" id="chatlog"></div>
+    <div class="valbar" id="valbar"></div>
+    <div class="choicebar" id="choicebar"></div>
+    <div class="inputbar">
+      <span class="prompt" id="prompt">접속 중...</span>
+      <input type="text" id="input" placeholder="이름을 입력하세요" disabled>
+      <button class="btn gold" id="send" disabled>보내기</button>
+      <button class="btn" id="stop" disabled hidden>멈춤</button>
+    </div>
+    <div class="hint" id="hint">하단=나 · 상대 카드를 클릭해 지목 · 값은 하단 버튼에서 선택</div>
+  </div>
+
+<script>
+/* ================================================================
+   다빈치 코드 웹 클라이언트 — 서버 STATE(JSON)를 받아 그린다.
+   시안(gui_mockup.html)의 CSS 를 그대로 사용.
+
+   ★ 클릭 UI (EHone 요청)
+     1) 추측   : 상대 카드를 클릭 → 값 버튼 클릭 → 자동 전송
+     2) 조커   : 카드 사이 화살표(▶) 클릭 = 슬롯 선택
+                 조커 옆 [앞]/[뒤] 버튼 클릭 = 앞뒤 선택
+     3) 결과   : 정답 = 빨간 O / 오답 = 파란 X 를 패산 위에 표시
+   ================================================================ */
+
+/* ================================================================
+   ★ 사운드 (sfx/) — EHone 제공 5종
+     Chat     : 채팅이 올라올 때
+     Result   : 게임 종료 후 순위표가 올라올 때
+     Selected : 상대 패를 눌렀을 때 / 확인 버튼을 누를 때
+     Hovered  : 패에 마우스를 올렸을 때
+     Turn_Up  : 내 턴이 될 때 (턴이 올라올 때)
+
+   브라우저는 사용자 제스처 없이 소리를 못 낸다 → 첫 클릭/키입력에서
+   unlock() 을 불러 모든 오디오를 재생 가능 상태로 만든다.
+   ================================================================ */
+const SFX = (() => {
+  const SRC = {
+    chat:   '/sfx/Chat.ogg',
+    result: '/sfx/Result.ogg',
+    select: '/sfx/Selected.ogg',
+    hover:  '/sfx/Hovered.wav',
+    turn:   '/sfx/Turn_Up.ogg',
+  };
+  const pool = {};
+  const lastAt = {};          // 같은 소리 연타 방지용 시각
+  let unlocked = false;
+
+  for(const k in SRC){
+    const a = new Audio(SRC[k]);
+    a.preload = 'auto';
+    a.volume = 0.6;
+    pool[k] = a;
+  }
+
+  function play(name){
+    const a = pool[name];
+    if(!a) return;
+    const now = (window.performance && performance.now) ? performance.now() : Date.now();
+    // hover 처럼 자주 나는 소리는 짧은 간격의 중복 재생을 막는다.
+    const gap = (name === 'hover') ? 60 : 30;
+    if(lastAt[name] && now - lastAt[name] < gap) return;
+    lastAt[name] = now;
+    try{
+      a.currentTime = 0;
+      const p = a.play();
+      if(p && p.catch) p.catch(() => {});   // 자동재생 차단은 조용히 무시
+    }catch(e){ /* 무시 */ }
+  }
+
+  /* 첫 사용자 제스처에서 모든 오디오를 잠금해제한다. */
+  function unlock(){
+    if(unlocked) return;
+    unlocked = true;
+    for(const k in pool){
+      const a = pool[k];
+      try{
+        a.muted = true;
+        const p = a.play();
+        if(p && p.then) p.then(() => { a.pause(); a.currentTime = 0; a.muted = false; })
+                         .catch(() => { a.muted = false; });
+        else { a.pause(); a.currentTime = 0; a.muted = false; }
+      }catch(e){ a.muted = false; }
+    }
+  }
+  ['pointerdown','keydown','touchstart'].forEach(ev =>
+    window.addEventListener(ev, unlock, { once: true, passive: true }));
+
+  return { play, unlock };
+})();
+
+const by = k => document.querySelector(`.seat.${k}`);
+const SEAT_ORDER = ['top','left','right','bottom'];
+let since = 0;            // 로그 폴링 커서
+let chatSince = 0;        // ★ 채팅 폴링 커서
+let lastState = null;
+let pendingAsk = null;    // 서버가 준 ask dict {mode,data,targets,values,...}
+let ended = false;
+let mySeat = null;
+let myName = null;        // ★ 내 이름 (채팅에서 '나' 표시 구분용)
+let restartVoted = false; // ★ 내가 '다시하기'를 눌렀는가
+
+/* 클릭 상태 */
+let armedTile = null;     // {seat, pos, el} — 지목할 카드를 고른 상태
+let armedEl = null;
+let pendingAskPrompt = null;   // STATE 밖으로 온 원문 프롬프트(이름 입력 등)
+let wasMyTurn = null;          // ★ 직전 STATE 에서 내 차례였는지 (턴 진입음 판정)
+let hoverKeyNow = null;        // ★ 지금 마우스가 올라가 있는 카드 key (hover 소리 반복 방지)
+
+/* ---------- 카드 생성 ---------- */
+/* 웹에서는 색을 배경으로 구분하므로 값에서 색 접미사를 떼고 앞부분만 보여준다.
+   일반 카드: '5b' -> '5', '6w' -> '6'
+   J 조커   : 'Jb' -> 'J'
+   A 조커   : 'aw' -> 'a'
+   B 조커   : 'bb' -> 'b'
+   즉 마지막 한 글자(색)만 제거한다. */
+function faceText(v){
+  if(v === null || v === undefined) return '';
+  const s = String(v);
+  if(s.length >= 2 && (s.endsWith('b') || s.endsWith('w'))) return s.slice(0, -1);
+  return s;
+}
+
+function mkCard(cd, opts){
+  opts = opts || {};
+  const el = document.createElement('div');
+  el.className = 'tile ' + (cd.is_black ? 'b' : 'w') +
+                 (cd.value === null ? ' back' : '') +
+                 (cd.is_joker ? ' joker' : '') +
+                 (cd.revealed ? ' revealed' : '');   // ★ 공개된 카드 = 파란 띠
+  if(cd.value !== null) el.textContent = faceText(cd.value);
+  if(cd.star) el.insertAdjacentHTML('beforeend','<span class="star">*</span>');
+  if(opts.pick){
+    el.classList.add('pick');
+    if(opts.onClick) el.addEventListener('click', opts.onClick);
+  }
+  /* ★ key 를 넘긴 카드에만 hover 소리를 단다.
+     - 폴링(0.28s)이 DOM 을 매번 새로 만들어도 같은 카드면 소리가 반복되지 않게
+       '지금 hover 중인 카드 key' 를 기억하고, 다른 카드로 옮겨갈 때만 재생한다.
+     - 이미 공개된 카드 / 내 턴이 아닐 때는 소리를 내지 않는다.
+       (호출부에서 opts.hoverKey 를 아예 안 넘기면 소리 없음) */
+  if(opts.hoverKey){
+    el.addEventListener('mouseenter', () => {
+      if(hoverKeyNow === opts.hoverKey) return;   // 같은 카드에 머무는 중
+      hoverKeyNow = opts.hoverKey;
+      SFX.play('hover');
+    });
+    el.addEventListener('mouseleave', () => {
+      if(hoverKeyNow === opts.hoverKey) hoverKeyNow = null;
+    });
+  }
+  return el;
+}
+
+function seatPlan(nOpp){
+  // ★ 패배자도 좌석에 남으므로 상대 수가 늘어난다(최대 5명까지 배치).
+  //   남는 자리는 'left','right' 를 재활용해 겹쳐 놓는다.
+  if(nOpp <= 0) return [];
+  if(nOpp === 1) return ['top'];
+  if(nOpp === 2) return ['top','right'];
+  if(nOpp === 3) return ['top','left','right'];
+  if(nOpp === 4) return ['top','left','right','top'];
+  return ['top','left','right','top','left'];
+}
+
+/* ---------- 렌더링 ---------- */
+function render(st){
+  if(!st) return;
+  lastState = st;
+  const players = st.players || [];
+  const me = players.find(p => p.is_me);
+  // ★ 패배자도 좌석에 남긴다 — 손패가 전부 공개된 채로 계속 보여야
+  //   남은 사람들이 "죽은 사람이 뭘 들고 있었는지"를 추리 재료로 쓸 수 있다.
+  const opps = players.filter(p => !p.is_me);
+  const plan = seatPlan(opps.length);
+  const ask = st.ask || null;
+  const guessMode = !!(ask && ask.mode === 'guess');
+
+  // 지목 가능한 (좌석,자리) 집합
+  const targets = new Set();
+  if(guessMode) (ask.targets||[]).forEach(t => targets.add(t.seat + ':' + t.pos));
+
+  SEAT_ORDER.forEach(k => by(k).style.display = 'none');
+
+  // 상대
+  opps.forEach((p, i) => {
+    const k = plan[i]; if(!k) return;
+    const node = by(k);
+    node.style.display = 'flex';
+    node.className = 'seat ' + k + (p.is_human ? ' human' : '') +
+                     (p.is_eliminated ? ' out' : '');
+    node.querySelector('.cap').innerHTML = capText(p);
+    const hand = node.querySelector('.hand');
+    hand.innerHTML = '';
+    (p.cards||[]).forEach((cd, ci) => {
+      const pos = ci + 1;
+      const canPick = guessMode && targets.has(p.seat + ':' + pos);
+      const el = mkCard(cd, {
+        pick: canPick,
+        // ★ hover 소리는 '지목 가능한 카드'(=내 턴 + 아직 공개 안 됨)에만.
+        hoverKey: canPick ? ('c' + p.seat + '_' + pos) : null,
+        onClick: canPick ? () => armTarget(p.seat, pos, el) : null
+      });
+      el._seat = p.seat; el._pos = pos;
+      hand.appendChild(el);
+    });
+    // 조커 앞/뒤 버튼 자리 정리
+    node.querySelector('.side-pick').classList.remove('on');
+    node.querySelector('.side-pick').innerHTML = '';
+  });
+
+  // 나 (bottom)
+  const bnode = by('bottom');
+  const bsp = document.querySelector('.seat.bottom .side-pick');
+  bsp.classList.remove('on'); bsp.innerHTML = '';
+  if(me && !st.spectating){
+    bnode.style.display = 'flex';
+    bnode.className = 'seat bottom' + (me.is_eliminated ? ' out' : '');
+    bnode.querySelector('.cap').innerHTML = capText(me);
+    const hand = bnode.querySelector('.hand');
+    hand.innerHTML = '';
+    renderMyHand(hand, me, ask);
+  } else if(me){
+    bnode.style.display = 'flex';
+    bnode.className = 'seat bottom out';
+    bnode.querySelector('.cap').innerHTML = capText(me);
+    bnode.querySelector('.hand').innerHTML =
+      '<span style="color:#849c8d;font-size:12px">(탈락 — 관전 중)</span>';
+  }
+
+  // 패산
+  document.getElementById('deck').textContent =
+    (st.deck !== undefined ? '남은 패 '+st.deck : '');
+  document.getElementById('arrow').textContent =
+    st.waiting_name ? (st.waiting_name + ' 차례') : '내 차례';
+
+  // ★ 내 턴 진입 감지 — '남의 차례'였다가 '내 차례'로 바뀌는 순간에만 소리를 낸다.
+  //   (waiting_name 없음 = 내 차례. 폴링마다 재생되지 않도록 상태 변화만 본다.)
+  const myTurnNow = !st.waiting_name && !st.spectating && !ended;
+  if(myTurnNow && wasMyTurn === false) SFX.play('turn');
+  wasMyTurn = myTurnNow;
+
+  const meName = me ? me.name : '?';
+  document.getElementById('title').textContent = '다빈치 코드 — ' + meName;
+
+  // ★★ 패산 위 큰 정보 바 — 차례 + 라운드·덱·공개 (EHone 요청).
+  //     상단 오른쪽(#sub)의 작은 글씨를 여기로 옮겨 크게 보여준다.
+  const yturn = document.getElementById('yturn');
+  const ystat = document.getElementById('ystat');
+  if(yturn){
+    // 내 차례면 "내 차례", 남의 차례면 "○○ 차례", 탈락(관전)이면 "관전 중".
+    yturn.textContent = st.spectating ? '관전 중'
+                      : (st.waiting_name ? (st.waiting_name + ' 차례') : '내 차례');
+    yturn.classList.toggle('mine', myTurnNow);   // 내 차례 강조(금색 유지)
+  }
+  if(ystat){
+    ystat.innerHTML =
+      `라운드 ${st.round}<span class="sep">·</span>덱 ${st.deck}장` +
+      (st.public && st.public.length
+        ? `<span class="sep">·</span>공개 ${st.public.length}장` : '');
+  }
+  // 상단 오른쪽은 중복이므로 비운다(정보는 패산 위로 이동).
+  document.getElementById('sub').textContent = '';
+  if(st.public && st.public.length){
+    document.getElementById('hint').textContent =
+      '공개: ' + st.public.map(faceText).join(', ');
+  }
+
+  // ★ 입력 UI (모드별)
+  renderAskUI(ask, st);
+  // ★ 폴링으로 DOM 을 다시 그려도 '고른 카드' 하이라이트를 복원한다.
+  if(armedTile){
+    const sel = `.seat .hand .tile.pick`;
+    for(const n of document.querySelectorAll(sel)){
+      if(n._seat === armedTile.seat && n._pos === armedTile.pos){
+        n.classList.add('armed');
+        armedEl = n;
+      }
+    }
+  }
+}
+
+/* 내 패 — 슬롯 화살표 / 앞뒤 버튼 포함 */
+function renderMyHand(hand, me, ask){
+  const cards = me.cards || [];
+  const mode = ask && ask.mode;
+  if(mode === 'joker_slot'){
+    // 카드 사이에 ▶ 화살표 (슬롯 0..M)
+    const M = (ask.data && ask.data.slots) || cards.length;
+    for(let s = 0; s <= cards.length; s++){
+      const item = document.createElement('div');
+      item.className = 'slot-item';
+      const ar = document.createElement('div');
+      ar.className = 'slot-arrow' + (s <= M ? ' on' : '');
+      ar.textContent = '▼';
+      ar.title = '이 위치에 조커 놓기 (슬롯 ' + s + ')';
+      ar.addEventListener('click', () => { SFX.play('select'); send(String(s)); });
+      item.appendChild(ar);
+      hand.appendChild(item);
+      if(s < cards.length) hand.appendChild(mkCard(cards[s]));
+    }
+    return;
+  }
+  cards.forEach(cd => {
+    const el = mkCard(cd);
+    if(mode === 'joker_side' && cd.is_joker){
+      el.classList.add('joker-target');   // 어느 조커인지 깜빡임
+    }
+    hand.appendChild(el);
+  });
+  // 조커 앞/뒤 버튼 (bottom 좌석의 side-pick 사용)
+  if(mode === 'joker_side'){
+    const sp = document.querySelector('.seat.bottom .side-pick');
+    sp.innerHTML = '';
+    const ncd = (ask.data && ask.data.ncard) ? '(' + ask.data.ncard + ') ' : '';
+    ['앞(왼쪽)','뒤(오른쪽)'].forEach((label, idx) => {
+      const b = document.createElement('button');
+      b.textContent = ncd + label;
+      b.addEventListener('click', () => { SFX.play('select'); send(String(idx)); });
+      sp.appendChild(b);
+    });
+    sp.classList.add('on');
+  }
+}
+
+/* ---------- 입력 UI (ask 모드별) ---------- */
+const inputEl = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+const stopBtn = document.getElementById('stop');
+const promptEl = document.getElementById('prompt');
+const valbarEl = document.getElementById('valbar');
+const choicebarEl = document.getElementById('choicebar');
+const chatlogEl = document.getElementById('chatlog');
+let chatReady = false;      // ★ true = 텍스트바가 채팅 모드 (이름을 이미 보낸 뒤)
+
+function clearValbar(){
+  valbarEl.classList.remove('on');
+  valbarEl.innerHTML = '';
+  valbarEl._chips = {};
+  valbarEl._sig = undefined;
+}
+
+/* ---------- ★ 모드별 선택 버튼 (검은카드수 / 계속·그만 / 공개자리) ---------- */
+function clearChoice(){
+  choicebarEl.classList.remove('on');
+  choicebarEl.innerHTML = '';
+  choicebarEl._sig = undefined;
+}
+/* label + 버튼 목록. sig 가 같으면 다시 그리지 않는다(폴링마다 재생성 방지). */
+function renderChoice(sig, label, buttons){
+  if(choicebarEl._sig !== sig){
+    choicebarEl.innerHTML = '';
+    if(label){
+      const l = document.createElement('span');
+      l.className = 'clabel';
+      l.textContent = label;
+      choicebarEl.appendChild(l);
+    }
+    buttons.forEach(b => {
+      const el = document.createElement('div');
+      el.className = 'cbtn' + (b.no ? ' no' : '');
+      el.textContent = b.text;
+      // ★ 카드 값이 실려 오면 그 카드처럼 보이게 색을 입힌다 (예: '2b' → 검정 카드).
+      if(b.card !== undefined && b.card !== null && b.card !== ''){
+        el.classList.add('cardlike', b.card.endsWith('b') ? 'b' : 'w');
+      }
+      el.addEventListener('click', () => { SFX.play('select'); send(b.value); });
+      choicebarEl.appendChild(el);
+    });
+    choicebarEl._sig = sig;
+  }
+  choicebarEl.classList.add('on');
+}
+function clearArm(){
+  if(armedEl) armedEl.classList.remove('armed');
+  armedEl = null; armedTile = null;
+}
+
+/* ---------- ★ 게임 종료: 패산 제거 + 순위표 ---------- */
+/* ranking 은 STATE 의 {seat(문자열): 순위(int)} · players 로 이름을 찾는다. */
+function showRankboard(st){
+  SFX.play('result');                        // ★ 순위표 표시음
+  const rb = document.getElementById('rankboard');
+  const list = document.getElementById('rb-list');
+  const players = (st && st.players) || [];
+  const ranking = (st && st.ranking) || {};
+
+  // {seat: 순위} → 순위 오름차순 배열
+  const rows = Object.keys(ranking).map(k => ({
+    seat: Number(k), rank: ranking[k],
+    name: (players.find(p => p.seat === Number(k)) || {}).name || ('좌석 ' + k),
+    is_me: !!(players.find(p => p.seat === Number(k)) || {}).is_me,
+  }));
+  // ranking 이 비어 있으면(모종료 직후) players 순서로 대체
+  if(!rows.length){
+    players.forEach(p => rows.push({
+      seat: p.seat, rank: p.rank || '-', name: p.name, is_me: p.is_me }));
+  }
+  rows.sort((a, b) => (a.rank || 99) - (b.rank || 99));
+
+  list.innerHTML = '';
+  rows.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'rb-row' + (r.rank === 1 ? ' first' : '') + (r.is_me ? ' me' : '');
+    const medal = r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : '';
+    row.innerHTML =
+      `<span class="rb-rank">${medal || (r.rank + '위')}</span>` +
+      `<span class="rb-name">${r.name}` +
+      (r.is_me ? '<span class="rb-me"> (나)</span>' : '') + '</span>';
+    list.appendChild(row);
+  });
+
+  rb.classList.add('on');
+  const yama = document.getElementById('yama');
+  if(yama) yama.style.display = 'none';        // ★ 노란 패산 오브젝트 제거
+  const bv = document.getElementById('bigverdict');
+  if(bv) bv.classList.remove('show');
+
+  // ★ 다시하기 버튼 — 순위표 아래. 전원 동의하면 새 판이 시작된다.
+  const btn = document.getElementById('btn-restart');
+  btn.style.display = 'block';
+  btn.classList.remove('voted');
+  btn.disabled = false;
+  btn.textContent = '🔄 다시하기';
+  document.getElementById('rb-hint').textContent = '';
+  restartVoted = false;
+}
+
+function renderAskUI(ask, st){
+  const mode = ask && ask.mode;
+  if(ended){
+    return;
+  }
+  if(mode === 'guess'){
+    // 값 버튼 줄 — 값 목록이 바뀌면 다시 그린다(공개로 내 패가 변할 수 있음).
+    const sig = (ask.values||[]).join(',');
+    if(valbarEl._sig !== sig){
+      clearValbar();
+      const lbl = document.createElement('span');
+      lbl.className = 'vlabel';
+      lbl.textContent = '값:';
+      valbarEl.appendChild(lbl);
+      const chips = {};
+      (ask.values||[]).forEach(v => {
+        const c = document.createElement('div');
+        const isJoker = v[0] === 'J';
+        c.className = 'vchip ' + (isJoker ? (v.endsWith('b')?'b':'w') + ' jk'
+                                          : (v.endsWith('b') ? 'b' : 'w'));
+        if(isJoker) c.classList.add('jk');   // J 배지(::before) 중복 방지
+        c.textContent = faceText(v);
+        c.dataset.val = v;      // 서버로 보낼 값은 원본 유지 (예: '5b')
+        c.title = v;
+        c.addEventListener('click', () => {
+          SFX.play('select');              // ★ 값(확인) 버튼 클릭음
+          if(!armedTile){ promptEl.textContent = '먼저 상대 카드를 클릭하세요'; return; }
+          send(`${armedTile.seat+1} ${armedTile.pos} ${v}`);
+          clearArm();
+        });
+        valbarEl.appendChild(c);
+        chips[v] = c;
+      });
+      valbarEl._chips = chips;
+      valbarEl._sig = sig;
+      valbarEl.classList.add('on');
+    }
+    promptEl.textContent = armedTile
+      ? `상대 ${armedTile.seat+1} · 자리 ${armedTile.pos} → 값 버튼을 누르세요`
+      : '상대 카드를 클릭하세요';
+    setChatInput();
+    return;
+  }
+  clearValbar();
+  clearChoice();
+  clearArm();
+
+  if(mode === 'joker_slot'){
+    promptEl.textContent = '내 패의 ▼ 화살표를 클릭하세요 (조커 놓을 위치)';
+    setChatInput();
+    return;
+  }
+  if(mode === 'joker_side'){
+    promptEl.textContent = '조커 옆 [앞]/[뒤] 버튼을 클릭하세요';
+    setChatInput();
+    return;
+  }
+  if(mode === 'black_count'){
+    const mx = (ask.data && ask.data.max) || 4;
+    // ★ 라벨('검은 카드')과 중복되지 않게 짧게 — 버튼 줄이 곧 UI다.
+    promptEl.textContent = `받을 검은 카드 수를 위 버튼에서 고르세요 (0~${mx})`;
+    const btns = [];
+    for(let i = 0; i <= mx; i++) btns.push({ text: String(i), value: String(i) });
+    renderChoice('bc:' + mx, '검은 카드', btns);
+    setChatInput();
+    return;
+  }
+  if(mode === 'more_guess'){
+    promptEl.textContent = '연속으로 더 지목할까요?';
+    renderChoice('more', null, [
+      { text: '계속 지목', value: '' },        // Enter(빈 응답) = 계속
+      { text: '그만', value: 'q', no: true },
+    ]);
+    setChatInput();
+    return;
+  }
+  if(mode === 'fail_reveal'){
+    const hidden = (ask.data && ask.data.hidden) || [];
+    const vals = (ask.data && ask.data.values) || [];
+    promptEl.textContent = '공개할 카드를 고르세요';
+    // ★ 자리번호 대신 '그 패의 값'을 그대로 보여준다 (EHone 요청).
+    //   웹은 색을 카드 배경으로 구분하므로 숫자/문자만 보인다: 2b->2, aw->a, Jb->J.
+    //   버튼은 누르는 순간 그 자리번호(value)를 서버로 보낸다.
+    const btns = hidden.map((h, i) => {
+      const v = vals[i];
+      return {
+        text: (v !== undefined && v !== null) ? faceText(v) : `자리 ${h}`,
+        value: String(h),
+        card: v,          // 카드 색까지 그리기 위한 원본 값(2b 등)
+      };
+    });
+    renderChoice('fr:' + hidden.join(','), '공개할 카드', btns);
+    setChatInput();
+    return;
+  }
+  // 일반(이름 입력 등) — 자유 입력. 이름을 보내면 채팅 모드로 전환된다.
+  // ★ --name 접속이면 이름이 이미 있으므로 '이름 입력' 대신 '대기 중'으로 둔다.
+  if(pendingAskPrompt !== null && pendingAskPrompt !== undefined && !myName){
+    promptEl.textContent = '이름을 입력하세요';
+    setInput(true, true);
+    inputEl.placeholder = '이름을 입력하세요';
+    inputEl.focus();
+    return;
+  }
+  // 게임 입력이 없는 상태 → 텍스트바는 채팅용으로 열어둔다.
+  promptEl.textContent = chatReady ? '채팅' : '대기 중...';
+  setInput(chatReady, false);
+}
+
+/* 입력창 상태: enabled=false 면 비활성. focus=true 면 포커스. */
+function setInput(enabled, focus){
+  inputEl.disabled = !enabled;
+  sendBtn.disabled = !enabled;
+  stopBtn.disabled = true;            // 멈춤 버튼은 더 이상 쓰지 않는다(버튼화)
+  if(enabled && focus) inputEl.focus();
+}
+
+/* ★ 게임 입력 중에도 채팅은 계속 칠 수 있어야 한다.
+   버튼 입력 모드(추측·조커·선택)에서는 텍스트바를 '채팅용'으로 열어둔다. */
+function setChatInput(){
+  if(chatReady){ inputEl.disabled = false; sendBtn.disabled = false; }
+  else { inputEl.disabled = true; sendBtn.disabled = true; }
+  stopBtn.disabled = true;
+}
+
+function armTarget(seat, pos, el){
+  SFX.play('select');                        // ★ 상대 패 클릭음
+  clearArm();
+  armedTile = {seat, pos};
+  armedEl = el || null;
+  if(armedEl) armedEl.classList.add('armed');
+  renderAskUI(lastState ? lastState.ask : null, lastState);
+}
+
+function capText(p){
+  // ★ '패배' — 탈락자도 좌석에 남아 손패(전부 공개)를 계속 보여준다.
+  if(p.is_eliminated) return `${p.name} (패배)`;
+  return `${p.name}  (비밀 ${p.hidden_count} · 공개 ${p.revealed_count})`;
+}
+
+/* ---------- ★ 결과 표시 (O / X) ---------- */
+/* ★ EHone 요청: 큰 O/X 하나만 띄운다(패산 위 작은 것은 제거). 확대 애니메이션은 유지. */
+let verdictTimer = null;
+function showVerdict(ok){
+  const big = document.getElementById('bigverdict');
+  if(!big) return;
+  big.classList.remove('ok','no','show');
+  big.querySelector('.mark').textContent = ok ? '○' : '✕';
+  big.classList.add(ok ? 'ok' : 'no');
+  // 리플로우 강제 후 show → 애니메이션 재생
+  void big.offsetWidth;
+  big.classList.add('show');
+  if(verdictTimer) clearTimeout(verdictTimer);
+  verdictTimer = setTimeout(() => { big.classList.remove('show'); }, 1400);
+}
+
+/* ---------- 로그 ---------- */
+const logEl = document.getElementById('log');
+function pushLog(text){
+  const div = document.createElement('div');
+  div.textContent = text;
+  if(text.includes('✔') || text.includes('정답')) div.className = 'ok';
+  else if(text.includes('✘') || text.includes('오답')) div.className = 'no';
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+  while(logEl.childNodes.length > 300) logEl.removeChild(logEl.firstChild);
+}
+
+/* ---------- 입력 전송 ---------- */
+/* 게임 입력 전송 (버튼·텍스트 공용) */
+async function send(text){
+  if(ended) return;
+  try{
+    await fetch('/api/reply', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text: text})
+    });
+  }catch(e){ /* 무시 */ }
+  inputEl.value = '';
+  clearValbar();
+  clearChoice();
+  clearArm();
+  inputEl.disabled = true; sendBtn.disabled = true; stopBtn.disabled = true;
+  promptEl.textContent = '...';
+}
+
+/* ★ 채팅 전송 — 게임 입력(/api/reply)과 분리된 경로 */
+async function sendChat(text){
+  const body = (text || '').trim();
+  if(!body) return;
+  try{
+    await fetch('/api/chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text: body})
+    });
+  }catch(e){ /* 무시 */ }
+  inputEl.value = '';
+}
+
+/* ★ 채팅 한 줄을 대화창에 그린다. '[이름] 내용' 형태를 이름/본문으로 나눈다. */
+function pushChat(line){
+  SFX.play('chat');                          // ★ 채팅 수신음
+  const m = /^\[([^\]]+)\]\s*([\s\S]*)$/.exec(line);
+  const name = m ? m[1] : '';
+  const body = m ? m[2] : line;
+  const div = document.createElement('div');
+  div.className = 'cline';
+  const mine = (name && mySeat !== null && name === myName);
+  if(mine) div.classList.add('me');
+  if(name){
+    const s = document.createElement('span');
+    s.className = 'cname';
+    s.textContent = '[' + name + '] ';
+    div.appendChild(s);
+  }
+  div.appendChild(document.createTextNode(body));
+  chatlogEl.appendChild(div);
+  chatlogEl.scrollTop = chatlogEl.scrollHeight;
+}
+
+/* 텍스트바에서 엔터/보내기 — 이름 단계인지 채팅인지에 따라 경로가 다르다. */
+function submitTextBar(){
+  const v = inputEl.value;
+  if(!v || !v.trim()) return;
+  if(chatReady) sendChat(v);
+  else {
+    // 이름 보내기 → 이후부터는 채팅 모드
+    chatReady = true;
+    inputEl.placeholder = '채팅 메시지 (Enter)';
+    send(v);
+  }
+}
+
+sendBtn.onclick = () => submitTextBar();
+stopBtn.onclick = () => send('q');
+/* ★ 다시하기 버튼 — 전원이 누르면 같은 구성원으로 새 게임이 시작된다. */
+document.getElementById('btn-restart').onclick = async () => {
+  if(restartVoted) return;                 // 이미 눌렀으면 무시
+  restartVoted = true;
+  const btn = document.getElementById('btn-restart');
+  btn.classList.add('voted');
+  btn.disabled = true;
+  SFX.play('select');
+  try{
+    await fetch('/api/restart', {method:'POST', cache:'no-store'});
+  }catch(e){ /* 무시 — 다음 폴링에서 현황이 갱신된다 */ }
+};
+inputEl.addEventListener('keydown', e => {
+  if(e.key === 'Enter'){ e.preventDefault(); submitTextBar(); }
+});
+
+/* ---------- 폴링 ---------- */
+let lastVerdictMsg = null;
+let gameId = 0;           // ★ 서버 게임 세대 — 바뀌면 새 판이므로 커서를 리셋한다
+
+/* ★ 폴링 1회분 — 테스트에서 직접 호출할 수 있게 분리했다(pollOnce). */
+async function pollOnce(){
+  const r = await fetch('/api/state?since=' + since + '&chat_since=' + chatSince,
+                        {cache:'no-store'});
+  const d = await r.json();
+  {
+    // ★ 새 게임 감지 — 서버가 로그를 비웠으므로 커서를 0 으로 되돌린다.
+    //   (안 하면 since > 새 로그 길이 가 되어 로그가 영영 안 오고,
+    //    로그에서 감지하는 O/X 도 안 뜬다.)
+    if(typeof d.game_id === 'number' && d.game_id !== gameId){
+      gameId = d.game_id;
+      since = 0; chatSince = 0;
+    }
+
+    if(d.messages && d.messages.length){
+      d.messages.forEach(m => {
+        pushLog(m);
+        // ★ 정답/오답 판정을 로그에서 감지해 O/X 를 띄운다.
+        const t = m.replace(/\s+/g, ' ');
+        const isOk = t.includes('정답!') || t.includes('✔ 정답');
+        const isNo = t.includes('오답!') || t.includes('✘ 오답');
+        if(isOk) showVerdict(true);
+        else if(isNo) showVerdict(false);
+        /* ★★ 다른 사람(CPU 포함)의 추리 결과에도 소리를 낸다 (EHone 요청).
+           로그 예: "✔ 정답! CPU1 가 (#2 P2의 패) 자리 1 = 0w 추측 → 0w 공개."
+                    "✘ 오답! Suzuha 의 추측((#3 CPU1의 패) 자리 1 = 0b) — 벌칙: ..."
+           행위자 이름을 뽑아 내 이름과 다르면 '남의 추리' → 선택음을 재생한다.
+           (내 추리는 내가 이미 소리를 냈으므로 중복 방지.) */
+        if((isOk || isNo) && myName){
+          const mm = /(?:정답|오답)!\s*(.+?)\s*(?:가|이|의)\s/.exec(t);
+          const actor = mm ? mm[1].trim() : null;
+          if(actor && actor !== myName) SFX.play('select');
+        }
+      });
+      since = d.msg_total;
+    }
+    if(d.chats && d.chats.length){          // ★ 채팅 수신
+      d.chats.forEach(pushChat);
+      chatSince = d.chat_total;
+    }
+    mySeat = (d.state && d.state.viewer !== undefined && d.state.viewer !== null)
+             ? d.state.viewer : d.seat;      // ★ STATE viewer 우선 (재시작 시 좌석이 바뀔 수 있다)
+    if(d.name) myName = d.name;             // ★ 내 이름 (채팅 '나' 표시)
+    // ★ 이름이 정해졌으면 텍스트바는 채팅 모드.
+    //   이름 단계는 ask_prompt 만 있고 ask.mode 가 없다.
+    //   단, --name 접속이면 relay 가 이름 ASK 를 보내도 서버가 자동응답하므로
+    //   이름이 이미 정해져 있다 → '이름 입력' 대신 채팅으로 연다.
+    const askingName = !!d.ask_prompt && !(d.ask && d.ask.mode) && !d.name;
+    if(d.name && !chatReady){
+      chatReady = true;
+      clearChoice();                     // ★ '이름 대기' 안내가 남지 않게 정리
+      inputEl.placeholder = '채팅 메시지 (Enter)';
+    }
+    if(d.name && chatReady && inputEl.placeholder !== '채팅 메시지 (Enter)')
+      inputEl.placeholder = '채팅 메시지 (Enter)';
+    pendingAskPrompt = d.ask_prompt;
+    if(d.state) render(d.state);
+    else if(d.ask_prompt && !ended){
+      // 게임 시작 전(이름 입력 등) — STATE 가 아직 없어도 입력창을 열어준다.
+      renderAskUI(null, null);
+    }
+
+    if(d.ended && !ended){
+      ended = true;
+      clearValbar(); clearChoice(); clearArm();
+      inputEl.disabled = true; sendBtn.disabled = true; stopBtn.disabled = true;
+      promptEl.textContent = '게임 종료';
+      if(d.end_text) pushLog('\n' + d.end_text);
+      showRankboard(d.state);          // ★ 패산 제거 + 순위표
+    } else if(!d.connected && !d.ask_prompt && !(d.ask && d.ask.mode) && !ended){
+      // 아직 이름 질문도 안 왔고 게임도 시작 안 된 상태
+      promptEl.textContent = '서버 연결 대기 중...';
+    }
+
+    // ★ '다시하기' 현황 — 게임 종료 화면에서만 의미가 있다.
+    if(d.ended) updateRestart(d.restart);
+
+    // ★ 새 게임이 시작됨 (서버가 이전 판 잔재를 비웠다) → 화면 초기화
+    if(ended && !d.ended){
+      ended = false;
+      clearArm();
+      inputEl.disabled = false; sendBtn.disabled = false; stopBtn.disabled = false;
+      resetForNewGame();
+    }
+  }
+}
+
+/* ★ '다시하기' 현황을 버튼/힌트에 반영한다. */
+function updateRestart(info){
+  if(!info) return;
+  const btn = document.getElementById('btn-restart');
+  const hint = document.getElementById('rb-hint');
+  const voted = info.voted || 0, total = info.total || 0;
+  if(info.extra){ hint.textContent = info.extra; }
+  else if(total > 0){ hint.textContent = `동의 ${voted} / ${total}`; }
+
+  if(restartVoted){
+    btn.classList.add('voted');
+    btn.disabled = true;
+    btn.textContent = `✓ 다시하기 (${voted}/${total})`;
+  } else {
+    btn.classList.remove('voted');
+    btn.disabled = false;
+    btn.textContent = `🔄 다시하기 (${voted}/${total})`;
+  }
+  if(Array.isArray(info.voted_names) && info.voted_names.length && !info.extra)
+    hint.textContent = '동의: ' + info.voted_names.join(', ');
+}
+
+/* ★ 새 게임 시작 — 순위표를 숨기고 패산을 되살린다. */
+function resetForNewGame(){
+  const rb = document.getElementById('rankboard');
+  if(rb) rb.classList.remove('on');
+  document.getElementById('rb-list').innerHTML = '';
+  document.getElementById('rb-hint').textContent = '';
+  restartVoted = false;
+  const yama = document.getElementById('yama');
+  if(yama) yama.style.display = '';
+  const bv = document.getElementById('bigverdict');
+  if(bv) bv.classList.remove('show');
+  // ★ 이전 판 로그/채팅을 화면에서 지운다 (서버도 비웠으므로 커서와 함께 초기화)
+  logEl.innerHTML = '';
+  chatlogEl.innerHTML = '';
+  clearValbar(); clearChoice();
+  promptEl.textContent = '';
+}
+
+/* 폴링 루프 — 오류는 삼키고 계속 돈다. */
+async function poll(){
+  try{ await pollOnce(); }
+  catch(e){ /* 네트워크 일시 오류 무시 */ }
+  setTimeout(poll, 280);
+}
+
+/* 테스트 접근자 */
+function isChatReady(){ return chatReady; }
+
+poll();
+</script>
+</body>
+</html>

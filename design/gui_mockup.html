@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>다빈치 코드 · 마작 테이블 GUI 시안</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
+  body { background:#072017; min-height:100vh; display:flex; flex-direction:column;
+         align-items:center; justify-content:center; gap:10px; }
+
+  .controls { display:flex; gap:8px; }
+  .btn { background:#173a27; color:#cfe6d6; border:1px solid #2e6b4a; padding:6px 16px;
+         border-radius:8px; cursor:pointer; font-weight:700; font-size:13px; }
+  .btn.active { background:#f2dd72; color:#3f3600; border-color:#a98d1e; }
+  .note { color:#849c8d; font-size:11px; letter-spacing:.3px; }
+
+  .table { width:840px; max-width:95vw; height:560px;
+    background:radial-gradient(ellipse at center,#3c9b63 0%,#226a43 55%,#0f2f1d 100%);
+    border:16px solid #6d4a20; outline:5px solid #9a6b34; border-radius:52px;
+    box-shadow:inset 0 0 90px rgba(0,0,0,.5), 0 16px 44px rgba(0,0,0,.6);
+    display:grid; grid-template-rows:auto 1fr auto; grid-template-columns:auto 1fr auto;
+    position:relative; }
+
+  /* ---- 중앙 패산 (노란 정사각형) ---- */
+  .yama { grid-area:2/2; place-self:center; z-index:4; }
+  .yama-inner { width:130px; height:130px; border-radius:14px;
+    background:linear-gradient(150deg,#ffe98a,#e3c950); border:4px solid #b08f1e;
+    box-shadow:inset 0 0 22px rgba(130,95,0,.4), 0 6px 14px rgba(0,0,0,.4);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; color:#5a4600;
+  }
+  .yama-inner .label { font-size:18px; font-weight:800; letter-spacing:3px; }
+  .wall { display:flex; gap:3px; margin:7px 0; }
+  .wall i { width:16px; height:16px; border-radius:3px;
+            background:#f7e072; border:1px solid #b08f1e; }
+  .deck { font-size:11px; font-weight:600; opacity:.85; }
+  .turn-arrow { color:#3f3600; font-size:15px; margin-top:1px; }
+
+  /* ---- 좌석 그리드 셀 ---- */
+  .seat { display:flex; }
+  .seat .cap { width:100%; text-align:center; font-size:12px; font-weight:700;
+               color:#eaf7ee; text-shadow:0 1px 2px rgba(0,0,0,.6); margin-bottom:4px; }
+  .seat.human .cap { color:#9fe8b8; }
+
+  .seat.top    { grid-area:1/1/2/4; flex-direction:column; align-items:center; padding:6px 0 0; }
+  .seat.left   { grid-area:2/1;     align-items:center; padding-left:10px; }
+  .seat.right  { grid-area:2/3;     align-items:center; padding-right:10px; }
+  .seat.bottom { grid-area:3/1/4/4; flex-direction:column; align-items:center; padding:6px 0 8px; }
+
+  .hand { display:flex; gap:5px; padding:2px; flex-wrap:wrap; justify-content:center;
+          align-items:center; }
+  .left-right > .seat .hand, .seat.left .hand, .seat.right .hand { flex-direction:column; }
+  .seat.left .cap, .seat.right .cap { width:auto; writing-mode:vertical-lr; margin:0; }
+  .cap .turn { color:#ffd97a; }
+
+  /* ---- 카드 ---- */
+  .tile { width:40px; height:56px; border-radius:6px; border:2px solid rgba(0,0,0,.3);
+          box-shadow:0 3px 5px rgba(0,0,0,.45);
+          display:flex; align-items:center; justify-content:center;
+          font-size:19px; font-weight:800; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.45);
+          position:relative; }
+  .tile.b { background:linear-gradient(145deg,#333,#0e0e0e); }
+  .tile.w { background:linear-gradient(145deg,#fdfdfd,#c9c9c9); color:#222; text-shadow:none; }
+  /* 미공개: 뒷면 문양 처리 */
+  .tile.back { }
+  .tile.back::after { content:'◈'; font-size:14px; }
+  .tile.b.back::after { color:#fff; opacity:.8; }
+  .tile.w.back::after { color:#222; opacity:.55; }
+  .tile.b.back { background:repeating-linear-gradient(45deg,#262626 0 7px,#1a1a1a 7px 12px); }
+  .tile.w.back { background:repeating-linear-gradient(45deg,#ececea 0 7px,#dcdcda 7px 12px); }
+  .tile .star { position:absolute; top:-2px; right:2px; color:#ff5757; font-size:13px;
+                text-shadow:0 0 3px #000; line-height:1; }
+
+  footer.hint { color:#57725f; font-size:11px; margin-top:8px; letter-spacing:.3px;
+                text-align:center; }
+</style>
+</head>
+<body>
+  <div class="controls" id="ctrl"></div>
+
+  <div class="table">
+    <div class="seat top    " data-seat="top"><div class="cap"></div>
+      <div class="hand"></div></div>
+    <div class="seat left  " data-seat="left"><div class="cap"></div>
+      <div class="hand"></div></div>
+
+    <div class="yama"><div class="yama-inner">
+      <div class="turn-arrow" id="arrow">⬆ 추측 · 시계방향 턴</div>
+      <div class="label">패 산</div>
+      <div class="wall"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="deck" id="deck"></div>
+    </div></div>
+
+    <div class="seat right " data-seat="right"><div class="cap"></div>
+      <div class="hand"></div></div>
+    <div class="seat bottom" data-seat="bottom"><div class="cap"></div>
+      <div class="hand"></div></div>
+  </div>
+  <div class="hint">하단=나(전 카드 숫자 공개) · 상대: 미공개=뒷면 문양, 공개 카드만 숫자 · 3인은 우측 자리(원하시는 방향으로 조정 가능)</div>
+
+<script>
+/* ================================================================
+   다빈치 코드 GUI 시안 — 마작 테이블 스타일 좌석 배치
+   사람(나)=하단(bottom·숫자 전부 공개). CPU=상/좌/우.
+   상대 패: 미공개=뒷면(문양)만 / 공개 카드만 숫자.
+   ================================================================ */
+const by = k => document.querySelector(`.seat.${k}`);
+const SEAT_ORDER = ['top','left','right','bottom'];
+
+function mk(value, color, open, star){
+  const el=document.createElement('div');
+  el.className='tile '+color+(open?'':' back');
+  if(open) el.textContent = value;
+  if(star) el.insertAdjacentHTML('beforeend','<span class="star">*</span>');
+  return el;
+}
+
+/* --------- 인원별 패 구성 (실제 26장 규칙 반영) -----------
+   2인 : 시작 4장씩 → 덱 18장 남아 번갈아 뽑아 각 최대 13장 가능
+   3인 : 시작 4장씩 → 남은 14장 → 한 사람 최대 ~9장
+   4인 : 시작 3장씩 → 남은 14장 → 한 사람 최대 7장(넘지 않음)
+   시안은 "많이 뽑힌 중·후반" 스냅샷을 보여줘 공간 수용을 점검한다.  */
+function handFor(p, isMine, i){
+  // 26장에서: 남는 덱을 (2인=최대18장 소진가능 / 3·4인=14장) 고려해
+  // 장수 많아질 수록 내/상대 같은 추이. 시연치(간단히):
+  const maxMine  = {2:13,3:9,4:7}[p];      // 내(하단)가 꼭대기까지 가정한 장수
+  const maxOther = {2:13,3:9,4:7}[p];      // 상대도 비슷
+  const target = isMine? maxMine : maxOther;
+  // 색은 흑/백 교대로 섞고 값은 (숨김/공개) 부분공개
+  const arr=[];
+  // 실제 값은 내 판에만 보이게 일부 공개/숨김을 생성
+  for(let k=0;k<target;k++){
+    const black = (k%2===0);                 // 흑백 교대 → 색 골고루
+    // 공개 여부: 내 카드는 원래 자기 앞에선 전부 숫자지만(내가 아는 값)
+    // 보기 좋게 '몇 장 이미 오답/정답으로 공개됨' 연출 — 일부만 숫자 보임
+    let open=false;
+    if(isMine){ open = (k< target-2); }      // 내 패 2장은 어쩌다 값 숨김(아직? 아니 내 패는 다 아는디)
+    ...
+  }
+}
+
+function plan(p){
+  const o={bottom:true};
+  if(p>=2) o.top=true;
+  if(p===3) o.right=true;          // 3인: 하단(나)+상단+우측
+  if(p===4){ o.top=true;o.left=true;o.right=true; }
+  return o;
+}
+
+function render(p){
+  const on = plan(p);
+  const cap = { bottom:'나 · 사람 [하단]', top:'CPU · 상단(맞은편)',
+                left:'CPU · 좌측',       right:'CPU · 우측' };
+  SEAT_ORDER.forEach(k=>{
+    by(k).style.display = on[k]?'flex':'none';
+  });
+  SEAT_ORDER.filter(k=>on[k]).forEach(k=>{
+    by(k).querySelector('.cap').textContent = cap[k];
+    const h=by(k).querySelector('.hand'); h.innerHTML='';
+    const seq = (k==='bottom')? MINE : CPU;
+    seq.forEach(c=> h.appendChild(mk(...c)));
+  });
+  const left={2:18,3:12,4:8}[p];         // 남은 덱 수(시연용 수치)
+  document.getElementById('deck').textContent =
+    p+'인 대국 · 남은 패 '+left;
+}
+
+/* 인원 버튼 */
+(function(){
+  const c=document.getElementById('ctrl');
+  [2,3,4].forEach(n=>{
+    const b=document.createElement('button');
+    b.className='btn'+(n===4?' active':''); b.textContent=n+'인 대국';
+    b.onclick=()=>{ [...document.querySelectorAll('.btn')].forEach(x=>x.classList.remove('active'));
+                    b.classList.add('active'); render(n); };
+    c.appendChild(b);
+  });
+})();
+render(4);
+</script>
+</body>
+</html>
